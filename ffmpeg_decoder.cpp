@@ -8,6 +8,7 @@
 #include <vector>
 #include <cassert>
 #include <sstream>
+#include <chrono>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -56,6 +57,33 @@ void save_frame(FILE* outf,AVCodecContext* codec_context,AVFrame* picture){
         fwrite(picture->data[2] + i * picture->linesize[2], 1, codec_context->width/2, outf );
 }
 
+/*void print_hw_decoders(){
+    fprintf(stderr,"\n hw Decoders\n");
+    AVHWAccel *first_hwaccel   = av_hwaccel_next(NULL);
+    fprintf(stderr,"%p", first_hwaccel);
+    AVHWAccel *hwaccel = first_hwaccel;
+    AVHWAccel *h264 = NULL;
+    const char * h264_name = "h264_vaapi";
+    while (hwaccel != NULL)
+    {
+        if ( hwaccel != NULL)
+        {
+            fprintf(stderr,"%s ", hwaccel->name);
+            if (strcmp(hwaccel->name, h264_name)== 0)
+            {
+                h264=hwaccel;
+            }
+        }
+        hwaccel=av_hwaccel_next(hwaccel);
+
+        if (hwaccel == first_hwaccel)
+        {
+            break;
+        }
+    }
+    fprintf(stderr,"\n");
+}*/
+
 void video_decode(const char *in_filename,const char *out_filename)
 {
 
@@ -76,12 +104,22 @@ void video_decode(const char *in_filename,const char *out_filename)
     av_init_packet(&avpkt);
 
     codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+    //codec = avcodec_find_encoder_by_name("hevc_v4l2m2m");
+    //codec = avcodec_find_encoder_by_name("h264_nvdec");
     if (!codec) {
         fprintf(stderr, "codec not found\n");
         exit(1);
+    }else{
+        printf("Found codec %s\n",codec->long_name);
     }
 
     codec_context = avcodec_alloc_context3(codec);
+    if (codec_context->hwaccel != nullptr){
+        fprintf(stderr, "HW accel IN USE : %s\n",codec_context->hwaccel->name);
+    }else{
+        fprintf(stderr, "NO HW accel IN USE\n");
+    }
+
     picture = av_frame_alloc();
 
     if((codec->capabilities)&AV_CODEC_CAP_TRUNCATED)
@@ -89,6 +127,8 @@ void video_decode(const char *in_filename,const char *out_filename)
 
     codec_context->width = 1920;
     codec_context->height = 1080;
+    codec_context->time_base=AVRational{120,1};
+    codec_context->framerate=AVRational{120,1};
 
     if (avcodec_open2(codec_context, codec, NULL) < 0) {
         fprintf(stderr, "could not open codec\n");
@@ -112,10 +152,13 @@ void video_decode(const char *in_filename,const char *out_filename)
         in_remaining  -= len_parse;
 
         if(avpkt.size){
-            std::cout<<"Got packet"<<avpkt.size<<"\n";
+            std::cout<<"Got packet: "<<avpkt.size<<" bytes\n";
             //decode_frame(data, size);
+            const auto before=std::chrono::steady_clock::now();
             int res=avcodec_send_packet(codec_context,&avpkt);
-            std::cout<<"avcodec_send_packet returned:"<<res<<"\n";
+            if(res!=0){
+                std::cout<<"avcodec_send_packet returned:"<<res<<"\n";
+            }
 
             int len=-1;
             while (len!=0){
@@ -124,6 +167,8 @@ void video_decode(const char *in_filename,const char *out_filename)
                     std::cout<<"no frame yet\n";
                 }
             }
+            const auto decode_delay=std::chrono::steady_clock::now()-before;
+            std::cout<<"Decode delay:"<<((float)std::chrono::duration_cast<std::chrono::microseconds>(decode_delay).count()/1000.0f)<<" ms\n";
             //const int len = avcodec_receive_frame(codec_context,picture);
             //std::cout<<"avcodec_receive_frame returned:"<<len<<"\n";
 
