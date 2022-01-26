@@ -84,6 +84,9 @@ void save_frame(FILE* outf,AVCodecContext* codec_context,AVFrame* picture){
     fprintf(stderr,"\n");
 }*/
 
+//static constexpr auto MY_AV_CODEC_ID=AV_CODEC_ID_H264;
+static constexpr auto MY_AV_CODEC_ID=AV_CODEC_ID_HEVC;
+
 void video_decode(const char *in_filename,const char *out_filename)
 {
 
@@ -103,9 +106,10 @@ void video_decode(const char *in_filename,const char *out_filename)
 
     av_init_packet(&avpkt);
 
-    codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+    codec = avcodec_find_decoder(MY_AV_CODEC_ID);
     //codec = avcodec_find_encoder_by_name("hevc_v4l2m2m");
     //codec = avcodec_find_encoder_by_name("h264_nvdec");
+    //codec = avcodec_find_encoder_by_name("h264_cuvid");
     if (!codec) {
         fprintf(stderr, "codec not found\n");
         exit(1);
@@ -122,8 +126,8 @@ void video_decode(const char *in_filename,const char *out_filename)
 
     picture = av_frame_alloc();
 
-    if((codec->capabilities)&AV_CODEC_CAP_TRUNCATED)
-        (codec_context->flags) |= AV_CODEC_FLAG_TRUNCATED;
+    //if((codec->capabilities)&AV_CODEC_CAP_TRUNCATED)
+    //    (codec_context->flags) |= AV_CODEC_FLAG_TRUNCATED;
 
     codec_context->width = 1920;
     codec_context->height = 1080;
@@ -135,7 +139,7 @@ void video_decode(const char *in_filename,const char *out_filename)
         exit(1);
     }
 
-    m_pCodecPaser = av_parser_init(AV_CODEC_ID_H264);
+    m_pCodecPaser = av_parser_init(MY_AV_CODEC_ID);
     if(!m_pCodecPaser){
         std::cout<<"Cannot find parser\n";
     }
@@ -201,7 +205,6 @@ void video_decode(const char *in_filename,const char *out_filename)
 
 int main(int argc, char **argv){
     //avcodec_register_all();
-    video_decode("in/dji.h264", "test_out.raw");
-
+    video_decode("in/rv1126.h265", "test_out.raw");
     return 0;
 }
