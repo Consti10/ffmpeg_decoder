@@ -85,12 +85,12 @@ void video_decode(char *outfilename, char *filename)
     int in_offset=0;
     int frameCount=0;
     while(in_remaining){
-        const int len = av_parser_parse2(m_pCodecPaser,codec_context,&avpkt.data, &avpkt.size,
+        const int len_parse = av_parser_parse2(m_pCodecPaser,codec_context,&avpkt.data, &avpkt.size,
                                &inputBuffer[in_offset],in_remaining,
                                0,0,0);
-        std::cout<<"consumed"<<len<<"bytes\n";
-        in_offset += len;
-        in_remaining  -= len;
+        std::cout<<"consumed"<<len_parse<<"bytes\n";
+        in_offset += len_parse;
+        in_remaining  -= len_parse;
 
         if(avpkt.size){
             std::cout<<"Got packet"<<avpkt.size<<"\n";
