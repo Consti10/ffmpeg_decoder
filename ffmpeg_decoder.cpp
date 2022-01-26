@@ -201,7 +201,7 @@ void video_decode(const char *in_filename,const char *out_filename)
 
 int main(int argc, char **argv){
     //avcodec_register_all();
-    video_decode("dji.h264", "test_out.raw");
+    video_decode("in/dji.h264", "test_out.raw");
 
     return 0;
 }
