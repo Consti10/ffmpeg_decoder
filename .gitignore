@@ -19,7 +19,7 @@ telemetry/conf/local.cfg
 ffmpeg_decoder
 simple
 test
-rpi.h264
+#rpi.h264
 test_out.raw
 dji.h264
 out/*
