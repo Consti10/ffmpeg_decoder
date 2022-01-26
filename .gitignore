@@ -21,7 +21,7 @@ simple
 test
 #rpi.h264
 test_out.raw
-dji.h264
+#dji.h264
 out/*
 
 ### JetBrains template
