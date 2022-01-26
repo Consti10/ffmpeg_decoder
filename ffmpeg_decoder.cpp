@@ -18,28 +18,32 @@ extern "C" {
 #define INBUF_SIZE 4096
 
 // read the whole input file and store it inside memory
-std::vector<uint8_t> readInputFile(char* in_filename){
+std::vector<uint8_t> readInputFile(const char* in_filename){
     FILE* f = fopen(in_filename, "rb");
     if (!f) {
         fprintf(stderr, "could not open %s\n",in_filename);
         exit(1);
     }
     fseek(f, 0L, SEEK_END);
-    const int sz = ftell(f);
+    const auto sz = ftell(f);
     fseek(f, 0, SEEK_SET);
     std::cout<<"size:"<<sz<<"\n";
     std::vector<uint8_t> ret(sz);
-    int data_len=fread(ret.data(), 1, sz, f);
+    const auto data_len=fread(ret.data(), 1, sz, f);
     fclose(f);
     assert(data_len==sz);
     return ret;
 }
 
-void video_decode(char *outfilename, char *filename)
+void video_decode(const char *in_filename,const char *out_filename)
 {
 
-    auto inputBuffer=readInputFile(filename);
-    FILE *outf;
+    auto inputBuffer=readInputFile(in_filename);
+    FILE* outf = fopen(out_filename, "w");
+    if(!outf){
+        fprintf(stderr, "could not open %s\n", in_filename);
+        exit(1);
+    }
 
     const AVCodec *codec;
     AVCodecContext *codec_context= NULL;
@@ -67,12 +71,6 @@ void video_decode(char *outfilename, char *filename)
 
     if (avcodec_open2(codec_context, codec, NULL) < 0) {
         fprintf(stderr, "could not open codec\n");
-        exit(1);
-    }
-
-    outf = fopen(outfilename,"w");
-    if(!outf){
-        fprintf(stderr, "could not open %s\n", filename);
         exit(1);
     }
 
@@ -184,7 +182,7 @@ void video_decode(char *outfilename, char *filename)
 
 int main(int argc, char **argv){
     //avcodec_register_all();
-    video_decode("test_out.raw", "rpi.h264");
+    video_decode("dji.h264", "test_out.raw");
 
     return 0;
 }
