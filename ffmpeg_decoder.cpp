@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 #include <cassert>
+#include <sstream>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -14,8 +15,6 @@ extern "C" {
 //#include <libavformat/avio.h>
 }
 
-
-#define INBUF_SIZE 4096
 
 // read the whole input file and store it inside memory
 std::vector<uint8_t> readInputFile(const char* in_filename){
@@ -33,6 +32,28 @@ std::vector<uint8_t> readInputFile(const char* in_filename){
     fclose(f);
     assert(data_len==sz);
     return ret;
+}
+
+void save_frame_pgm(const std::string& filename,AVCodecContext* codec_context,AVFrame* picture){
+    FILE* f = fopen(filename.c_str(),"wb");
+    unsigned char* buf=picture->data[0];
+    int wrap=picture->linesize[0];
+    int xsize=picture->width;
+    int ysize=picture->height;
+    fprintf(f, "P5\n%d %d\n%d\n", xsize, ysize, 255);
+    for (int i = 0; i < ysize; i++)
+        fwrite(buf + i * wrap, 1, xsize,f);
+    fclose(f);
+}
+
+
+void save_frame(FILE* outf,AVCodecContext* codec_context,AVFrame* picture){
+    for(int i=0; i<codec_context->height; i++)
+        fwrite(picture->data[0] + i * picture->linesize[0], 1, codec_context->width, outf  );
+    for(int i=0; i<codec_context->height/2; i++)
+        fwrite(picture->data[1] + i * picture->linesize[1], 1, codec_context->width/2, outf );
+    for(int i=0; i<codec_context->height/2; i++)
+        fwrite(picture->data[2] + i * picture->linesize[2], 1, codec_context->width/2, outf );
 }
 
 void video_decode(const char *in_filename,const char *out_filename)
@@ -96,8 +117,15 @@ void video_decode(const char *in_filename,const char *out_filename)
             int res=avcodec_send_packet(codec_context,&avpkt);
             std::cout<<"avcodec_send_packet returned:"<<res<<"\n";
 
-            const int len = avcodec_receive_frame(codec_context,picture);
-            std::cout<<"avcodec_receive_frame returned:"<<len<<"\n";
+            int len=-1;
+            while (len!=0){
+                len = avcodec_receive_frame(codec_context,picture);
+                if(len!=0){
+                    std::cout<<"no frame yet\n";
+                }
+            }
+            //const int len = avcodec_receive_frame(codec_context,picture);
+            //std::cout<<"avcodec_receive_frame returned:"<<len<<"\n";
 
             if (len < 0) {
                 fprintf(stderr, "Error while decoding frame %d\n", frameCount);
@@ -106,12 +134,9 @@ void video_decode(const char *in_filename,const char *out_filename)
             const bool got_picture = len==0;
             if(got_picture){
                 std::cout<<"Got picture "<<frameCount<<"\n";
-                for(int i=0; i<codec_context->height; i++)
-                    fwrite(picture->data[0] + i * picture->linesize[0], 1, codec_context->width, outf  );
-                for(int i=0; i<codec_context->height/2; i++)
-                    fwrite(picture->data[1] + i * picture->linesize[1], 1, codec_context->width/2, outf );
-                for(int i=0; i<codec_context->height/2; i++)
-                    fwrite(picture->data[2] + i * picture->linesize[2], 1, codec_context->width/2, outf );
+                std::stringstream ss;
+                ss<<"out/pic_"<<frameCount<<".pgm";
+                save_frame_pgm(ss.str(),codec_context,picture);
                 frameCount++;
             }else{
                 std::cout<<"Got no picture\n";
@@ -119,57 +144,6 @@ void video_decode(const char *in_filename,const char *out_filename)
         }
     }
 
-    /*
-    memset(inbuf + INBUF_SIZE, 0, AV_INPUT_BUFFER_PADDING_SIZE);
-    uint8_t inbuf[INBUF_SIZE + AV_INPUT_BUFFER_PADDING_SIZE];
-    int i;
-    int frame, got_picture=false, len,res;
-    frame = 0;
-    for(;;) {
-        avpkt.size = fread(inbuf, 1, INBUF_SIZE, f);
-        if (avpkt.size == 0)
-            break;
-
-        avpkt.data = inbuf;
-
-        //
-        //ret = av_parser_parse2(m_pCodecPaser,c, &avpkt.data,&avpkt.size,
-        //                       m_packet.data,m_packet.size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
-        //
-
-
-        while (avpkt.size > 0) {
-
-            res=avcodec_send_packet(c,&avpkt);
-            std::cout<<"avcodec_send_packet returned:"<<res<<"\n";
-
-            len = avcodec_receive_frame(c,picture);
-            std::cout<<"avcodec_receive_frame returned:"<<len<<"\n";
-
-            if (len < 0) {
-                fprintf(stderr, "Error while decoding frame %d\n", frame);
-                exit(1);
-            }
-            got_picture = len==0;
-
-            if (got_picture) {
-                printf("saving frame %3d\n", frame);
-                fflush(stdout);
-                for(i=0; i<c->height; i++)
-                    fwrite(picture->data[0] + i * picture->linesize[0], 1, c->width, outf  );
-                for(i=0; i<c->height/2; i++)
-                    fwrite(picture->data[1] + i * picture->linesize[1], 1, c->width/2, outf );
-                for(i=0; i<c->height/2; i++)
-                    fwrite(picture->data[2] + i * picture->linesize[2], 1, c->width/2, outf );
-                frame++;
-            }
-            avpkt.size -= len;
-            avpkt.data += len;
-        }
-    }
-
-    avpkt.data = NULL;
-    avpkt.size = 0;*/
 
     fclose(outf);
 
@@ -182,7 +156,7 @@ void video_decode(const char *in_filename,const char *out_filename)
 
 int main(int argc, char **argv){
     //avcodec_register_all();
-    video_decode("dji.h264", "test_out.raw");
+    video_decode("rpi.h264", "test_out.raw");
 
     return 0;
 }
