@@ -104,7 +104,7 @@ void video_decode(const char *in_filename,const char *out_filename)
     // added
     AVCodecParserContext *m_pCodecPaser;
 
-    //av_init_packet(&avpkt);
+    av_init_packet(&avpkt);
 
     codec = avcodec_find_decoder(MY_AV_CODEC_ID);
     //codec = avcodec_find_encoder_by_name("hevc_v4l2m2m");
