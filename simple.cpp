@@ -23,8 +23,12 @@ extern "C" {
 
 int main(int argc, char **argv){
     //avcodec_register_all();
-    AVPacket avpkt;
-    av_init_packet(&avpkt);
+    const AVCodec *codec;
+    codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+    if (!codec) {
+        fprintf(stderr, "codec not found\n");
+        exit(1);
+    }
     std::cout<<"HELLO\n";
     return 0;
 }

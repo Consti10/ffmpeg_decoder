@@ -1,16 +1,13 @@
 _LDFLAGS := $(LDFLAGS) `pkg-config --cflags --libs libavformat libswscale`
 _CPPFLAGS := $(CFLAGS)  -std=c++17
 
-all: ffmpeg_decoder
+all: simple #ffmpeg_decoder
+
+simple: simple.cpp
+	$(CXX) -o $@ $^ $(_LDFLAGS) $(_CPPFLAGS)
 
 #ffmpeg_decoder: ffmpeg_decoder.cpp
-#	$(CXX) -o $@ $^ $(_LDFLAGS) $(_LDFLAGS)
-
-#simple: simple.cpp
 #	$(CXX) -o $@ $^ $(_LDFLAGS) $(_CPPFLAGS)
-
-ffmpeg_decoder: ffmpeg_decoder.cpp
-	$(CXX) -o $@ $^ $(_LDFLAGS) $(_CPPFLAGS)
 
 clean:
 	rm -rf ffmpeg_decoder ffmpeg_decoder.o simple simple.o
