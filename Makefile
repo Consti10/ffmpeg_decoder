@@ -1,13 +1,13 @@
 _LDFLAGS := $(LDFLAGS) -I/usr/local/include -L/usr/local/lib -lavformat -lm -latomic -lz -lavcodec -pthread -lm -latomic -lz -lswresample -lm -latomic -lswscale -lm -latomic -lavutil -pthread -lm -latomic #`pkg-config --cflags --libs libavformat libswscale`
 _CPPFLAGS := $(CFLAGS)  -std=c++17
 
-all: simple #ffmpeg_decoder
+all: simple ffmpeg_decoder
 
 simple: simple.cpp
 	$(CXX) -o $@ $^ $(_LDFLAGS) $(_CPPFLAGS)
 
-#ffmpeg_decoder: ffmpeg_decoder.cpp
-#	$(CXX) -o $@ $^ $(_LDFLAGS) $(_CPPFLAGS)
+ffmpeg_decoder: ffmpeg_decoder.cpp
+	$(CXX) -o $@ $^ $(_LDFLAGS) $(_CPPFLAGS)
 
 clean:
 	rm -rf ffmpeg_decoder ffmpeg_decoder.o simple simple.o
