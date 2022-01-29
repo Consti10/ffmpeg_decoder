@@ -106,7 +106,8 @@ void video_decode(const char *in_filename,const char *out_filename)
 
     av_init_packet(&avpkt);
 
-    codec = avcodec_find_decoder(MY_AV_CODEC_ID);
+    //codec = avcodec_find_decoder(MY_AV_CODEC_ID);
+    codec = avcodec_find_decoder_by_name("hevc_v4l2m2m");
     //codec = avcodec_find_encoder_by_name("hevc_v4l2m2m");
     //codec = avcodec_find_encoder_by_name("h264_nvdec");
     //codec = avcodec_find_encoder_by_name("h264_cuvid");
