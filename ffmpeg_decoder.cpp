@@ -57,6 +57,43 @@ void save_frame(FILE* outf,AVCodecContext* codec_context,AVFrame* picture){
         fwrite(picture->data[2] + i * picture->linesize[2], 1, codec_context->width/2, outf );
 }
 
+int frameCount=0;
+
+void decode_frame(AVCodecContext *codec_context,AVPacket avpkt,AVFrame *picture){
+    std::cout<<"Got packet: "<<avpkt.size<<" bytes\n";
+    //decode_frame(data, size);
+    const auto before=std::chrono::steady_clock::now();
+    int res=avcodec_send_packet(codec_context,&avpkt);
+    if(res!=0){
+        std::cout<<"avcodec_send_packet returned:"<<res<<"\n";
+    }
+    int len=-1;
+    while (len!=0){
+        len = avcodec_receive_frame(codec_context,picture);
+        if(len!=0){
+            std::cout<<"no frame yet\n";
+        }
+    }
+    const auto decode_delay=std::chrono::steady_clock::now()-before;
+    std::cout<<"Decode delay:"<<((float)std::chrono::duration_cast<std::chrono::microseconds>(decode_delay).count()/1000.0f)<<" ms\n";
+    //const int len = avcodec_receive_frame(codec_context,picture);
+    //std::cout<<"avcodec_receive_frame returned:"<<len<<"\n";
+
+    if (len < 0) {
+        fprintf(stderr, "Error while decoding frame %d\n", frameCount);
+        exit(1);
+    }
+    const bool got_picture = len==0;
+    if(got_picture){
+        std::cout<<"Got picture "<<frameCount<<"\n";
+        std::stringstream ss;
+        ss<<"out/pic_"<<frameCount<<".pgm";
+        save_frame_pgm(ss.str(),codec_context,picture);
+        frameCount++;
+    }else{
+        std::cout<<"Got no picture\n";
+    }
+}
 /*void print_hw_decoders(){
     fprintf(stderr,"\n hw Decoders\n");
     AVHWAccel *first_hwaccel   = av_hwaccel_next(NULL);
@@ -106,12 +143,12 @@ void video_decode(const char *in_filename,const char *out_filename)
 
     av_init_packet(&avpkt);
 
-    //codec = avcodec_find_decoder(MY_AV_CODEC_ID);
+    codec = avcodec_find_decoder(MY_AV_CODEC_ID);
     //codec = avcodec_find_decoder_by_name("hevc_v4l2m2m");
-    codec = avcodec_find_decoder_by_name("v4l2m2m");
-    //codec = avcodec_find_encoder_by_name("hevc_v4l2m2m");
-    //codec = avcodec_find_encoder_by_name("h264_nvdec");
-    //codec = avcodec_find_encoder_by_name("h264_cuvid");
+    //codec = avcodec_find_decoder_by_name("v4l2m2m");
+    //codec = avcodec_find_decoder_by_name("hevc_v4l2m2m");
+    //codec = avcodec_find_decoder_by_name("h264_nvdec");
+    //codec = avcodec_find_decoder_by_name("h264_cuvid");
     if (!codec) {
         fprintf(stderr, "codec not found\n");
         exit(1);
@@ -148,7 +185,6 @@ void video_decode(const char *in_filename,const char *out_filename)
 
     int in_remaining=inputBuffer.size();
     int in_offset=0;
-    int frameCount=0;
     while(in_remaining){
         const int len_parse = av_parser_parse2(m_pCodecPaser,codec_context,&avpkt.data, &avpkt.size,
                                &inputBuffer[in_offset],in_remaining,
@@ -158,43 +194,9 @@ void video_decode(const char *in_filename,const char *out_filename)
         in_remaining  -= len_parse;
 
         if(avpkt.size){
-            std::cout<<"Got packet: "<<avpkt.size<<" bytes\n";
-            //decode_frame(data, size);
-            const auto before=std::chrono::steady_clock::now();
-            int res=avcodec_send_packet(codec_context,&avpkt);
-            if(res!=0){
-                std::cout<<"avcodec_send_packet returned:"<<res<<"\n";
-            }
-
-            int len=-1;
-            while (len!=0){
-                len = avcodec_receive_frame(codec_context,picture);
-                if(len!=0){
-                    std::cout<<"no frame yet\n";
-                }
-            }
-            const auto decode_delay=std::chrono::steady_clock::now()-before;
-            std::cout<<"Decode delay:"<<((float)std::chrono::duration_cast<std::chrono::microseconds>(decode_delay).count()/1000.0f)<<" ms\n";
-            //const int len = avcodec_receive_frame(codec_context,picture);
-            //std::cout<<"avcodec_receive_frame returned:"<<len<<"\n";
-
-            if (len < 0) {
-                fprintf(stderr, "Error while decoding frame %d\n", frameCount);
-                exit(1);
-            }
-            const bool got_picture = len==0;
-            if(got_picture){
-                std::cout<<"Got picture "<<frameCount<<"\n";
-                std::stringstream ss;
-                ss<<"out/pic_"<<frameCount<<".pgm";
-                save_frame_pgm(ss.str(),codec_context,picture);
-                frameCount++;
-            }else{
-                std::cout<<"Got no picture\n";
-            }
+            decode_frame(codec_context,avpkt,picture);
         }
     }
-
 
     fclose(outf);
 

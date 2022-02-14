@@ -1,3 +1,6 @@
+hw_decode
+ffmpeg_decoder
+simple
 *.o
 *.a
 *.pyc
